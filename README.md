@@ -4,10 +4,10 @@ This repository contains the source code to reproduce the Inverse Optimization (
 
 ## Usage
 
-To test the code in this repository, you need to follow the following steps:
-- Download the Amazon Challenge dataset [here](https://aws.amazon.com/marketplace/pp/prodview-rqkdusd3nz3mw);
-- Run the script `process_data.py`. This scrip preprocesses the datasets and slipts them per depot (this script needs to be run only once);
-- Run `main.py`. This sript can be executed in the terminal/command line or in an IDE.
+To test the code in this repository, you need to follow the steps:
+1. Download the Amazon Challenge dataset [here](https://aws.amazon.com/marketplace/pp/prodview-rqkdusd3nz3mw);
+2. Run the script `process_data.py`. This scrip preprocesses the datasets and slipts them per depot (this script needs to be run only once);
+3. Run `main.py`. This sript can be executed in the terminal/command line or in an IDE.
 
 The following Python packages are required:
 - `numpy`;
