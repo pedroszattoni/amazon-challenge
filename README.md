@@ -11,8 +11,8 @@ To test the code in this repository, you need to follow the steps:
 
 The following Python packages are required:
 - `numpy`;
-- [`InvOpt`](https://github.com/pedroszattoni/invopt): this package is used to solve the IO problem;
-- `gurobipy` or `ortools`: our IO approach to the Amazon Challenge requires a Traveling Salesperson Problem (TSP) solver. Two options are available: one using Gurobi, which solves the TSP to optimality (exact, but slow), and one using Google OR Tools, which solves the TSP approximately (approximate, but fast).
+- [`invopt`](https://github.com/pedroszattoni/invopt): this package is used to solve the IO problem;
+- `gurobipy` or `ortools`: our IO approach to the Amazon Challenge requires a Traveling Salesperson Problem (TSP) solver. Two options are available: one using Gurobi, which solves the TSP to optimality (slow), and one using Google OR Tools, which solves the TSP approximately (fast).
 
 ## Citing
 If you use this repository, please cite the accompanying paper:
