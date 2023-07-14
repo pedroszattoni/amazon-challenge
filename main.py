@@ -27,9 +27,14 @@ if len(sys.argv) > 1:
                         help='Station (a.k.a. depot) code.')
     parser.add_argument('solver_IO', choices=['gurobi', 'ortools', 'greedy'],
                         help=('Solver used in the IO algorithm.'))
+    parser.add_argument('solver_zone_seq',
+                        choices=['gurobi', 'ortools', 'greedy'],
+                        help=('Solver used to compute the zone sequence ' +
+                              'when computing the Amazon score.'))
     parser.add_argument('solver_complete_route',
                         choices=['gurobi', 'ortools', 'greedy'],
-                        help=('Solver used in the IO algorithm.'))
+                        help=('Solver used to compute the complete route ' +
+                              'when computing the Amazon score.'))
     parser.add_argument('step_size_constant', type=float,
                         help=('Constant that multiplies the step-size used ' +
                               'for the IO algorithm.'))
@@ -49,11 +54,15 @@ if len(sys.argv) > 1:
     parser.add_argument('averaged_type', type=int,
                         choices=[0, 1, 2],
                         help=('Type of averaging of the iterates.'))
+    parser.add_argument('dataset_size', type=float,
+                        help=('Percentage of the training dataset used.'))
+    parser.add_argument('initial_theta', choices=['uniform', 'zone_centers'],
+                        help=('Initial theta vector.'))
     parser.add_argument('path_to_input_data',
                         help=('Path to the folder where the pre-processed ' +
                               'Amazon Challenge data is located.'))
     parser.add_argument('path_to_output_data',
-                        help=('Path to the folder where the script results ' +
+                        help=('Path to the folder where the results ' +
                               'should be saved.'))
     parser.add_argument('--sub_loss', action='store_true',
                         help=('Use suboptimality loss instead of augmented.'))
@@ -76,6 +85,7 @@ if len(sys.argv) > 1:
 
     station_code = args.station_code
     solver_IO = args.solver_IO
+    solver_zone_seq = args.solver_zone_seq
     solver_complete_route = args.solver_complete_route
     step_size_constant = args.step_size_constant
     step_size_type = args.step_size_type
@@ -85,6 +95,8 @@ if len(sys.argv) > 1:
     regularizer = args.regularizer
     reg_param = args.reg_param
     averaged_type = args.averaged_type
+    dataset_size = args.dataset_size
+    initial_theta = args.initial_theta
     path_to_input_data = args.path_to_input_data
     path_to_output_data = args.path_to_output_data
     sub_loss = args.sub_loss
@@ -94,32 +106,35 @@ if len(sys.argv) > 1:
     region_cluster = args.region_cluster
     zone_id_diff = args.zone_id_diff
 else:
-    # ['DLA7', 'DLA9', 'DLA8', 'DBO3', 'DSE5',
-    #          'DSE4', 'DCH4', 'DBO2', 'DCH3', 'DLA3',
-    #          'DLA4', 'DAU1', 'DCH1', 'DLA5', 'DSE2',
-    #          'DCH2', 'DBO1']
+    # ['DLA7', 'DLA9', 'DLA8', 'DBO3', 'DSE5', 'DSE4', 'DCH4', 'DBO2', 'DCH3',
+    #  'DLA3', 'DLA4', 'DAU1', 'DCH1', 'DLA5', 'DSE2', 'DCH2', 'DBO1']
     station_code = 'DBO1'
     solver_IO = 'gurobi'
+    solver_zone_seq = 'gurobi'
     solver_complete_route = 'ortools'
-    compute_train_score = True
+    compute_train_score = False
     area_cluster = True
     region_cluster = True
     zone_id_diff = True
     step_size_constant = 0.0005
     step_size_type = '1/t'
     resolution = 1
-    T = 5
+    T = 2
     update_step = 'standard'
     regularizer = 'L2_squared'
     reg_param = 0
-    averaged_type = 2
+    averaged_type = 0
+    dataset_size = 1
+    initial_theta = 'zone_centers'
     normalize_grad = False
     sub_loss = False
+
     path_to_input_data = 'path/to/input/data/'
     path_to_output_data = 'path/to/output/data/'
 
 print(f'station_code = {station_code}')
 print(f'solver_IO = {solver_IO}')
+print(f'solver_zone_seq = {solver_zone_seq}')
 print(f'solver_complete_route = {solver_complete_route}')
 print(f'sub_loss = {sub_loss}')
 print(f'compute_train_score = {compute_train_score}')
@@ -135,6 +150,8 @@ print(f'regularizer = {regularizer}')
 print(f'reg_param = {reg_param}')
 print(f'averaged_type = {averaged_type}')
 print(f'normalize_grad = {normalize_grad}')
+print(f'dataset_size = {dataset_size}')
+print(f'initial_theta = {initial_theta}')
 
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%% Load data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -307,10 +324,9 @@ def callback(theta):
 # %%%%%%%%%%%%%%%%%%%%%%%%%%% IO training/testing %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 # Compute initial theta
-initial_theta = 'zone_centers'
 p = m_train**2
 if initial_theta == 'uniform':
-    theta_0 = np.ones(p)
+    theta_0 = 0.1*np.ones(p)
 elif initial_theta == 'zone_centers':
     theta_0 = np.ones((m_train, m_train))
     for i in range(m_train):
@@ -332,8 +348,10 @@ if sub_loss:
     FOP_FOM = FOP
 else:
     FOP_FOM = FOP_aug
-theta_IO_list = iop.FOM(dataset_train_z, phi, theta_0, FOP_FOM, step_size_func,
-                        T,
+
+n_training_examples = round(dataset_size*len(dataset_train_z))
+theta_IO_list = iop.FOM(dataset_train_z[:n_training_examples],
+                        phi, theta_0, FOP_FOM, step_size_func, T,
                         Theta='nonnegative',
                         step=update_step,
                         regularizer=regularizer,
@@ -354,16 +372,15 @@ for T in T_list:
 
     if compute_train_score:
         scores_train = amazon_score(theta_IO, dataset_train, zc_train,
-                                    zone_id_to_index, index_to_zone_id,
-                                    solver_complete_route, solver_IO,
-                                    station_code, area_cluster, region_cluster,
-                                    zone_id_diff)
+                                    zone_id_to_index, solver_complete_route,
+                                    solver_zone_seq, station_code,
+                                    area_cluster, region_cluster, zone_id_diff)
         score_train_hist.append(scores_train['submission_score'])
 
     scores_test = amazon_score(theta_IO, dataset_test, zc_train,
-                               zone_id_to_index, index_to_zone_id,
-                               solver_complete_route, solver_IO, station_code,
-                               area_cluster, region_cluster, zone_id_diff)
+                               zone_id_to_index, solver_complete_route,
+                               solver_zone_seq, station_code, area_cluster,
+                               region_cluster, zone_id_diff)
     score_test_hist.append(scores_test['submission_score'])
     print(f'{round(100*(1+T_list.index(T))/len(T_list), 2)}%')
 
@@ -384,6 +401,7 @@ time_identifier = (str(current_time.tm_year) + f'{current_time.tm_mon:02d}' +
 with open(path_to_output_data+str(time_identifier)+'_log.txt', 'a') as log:
     log.write(f'station_code = {station_code}\n')
     log.write(f'solver_IO = {solver_IO}\n')
+    log.write(f'solver_zone_seq = {solver_zone_seq}\n')
     log.write(f'solver_complete_route = {solver_complete_route}\n')
     log.write(f'compute_train_score = {compute_train_score}\n')
     log.write(f'area_cluster = {area_cluster}\n')
@@ -399,6 +417,8 @@ with open(path_to_output_data+str(time_identifier)+'_log.txt', 'a') as log:
     log.write(f'averaged_type = {averaged_type}\n')
     log.write(f'normalize_grad = {normalize_grad}\n')
     log.write(f'sub_loss = {sub_loss}\n')
+    log.write(f'dataset_size = {dataset_size}\n')
+    log.write(f'initial_theta = {initial_theta}\n')
 
 results = {}
 
