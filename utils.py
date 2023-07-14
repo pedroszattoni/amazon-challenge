@@ -69,73 +69,12 @@ def zone_centers(data):
     return zc, stops_per_zone
 
 
-def get_data(station_code, solver_IO, solver_complete_route,
-             compute_train_score, area_cluster,
-             region_cluster, zone_id_diff,
-             step_size_constant, step_size_type, resolution,
-             T, update_step, regularizer, reg_param,
-             averaged_type, normalize_grad, sub_loss,
-             path_to_output_data):
-    """
-    Retrieve simulation data from simulation parameters.
-
-    Parameters
-    ----------
-    station_code : {'DLA7', 'DLA9', 'DLA8', 'DBO3', 'DSE5', 'DSE4', 'DCH4',
-                    'DBO2', 'DCH3', 'DLA3', 'DLA4', 'DAU1', 'DCH1', 'DLA5',
-                    'DSE2', 'DCH2', 'DBO1'}
-        Station (depot) code.
-    initial_theta : {'uniform', 'zone_centers'}
-        Initial theta strategy.
-    step : int
-        Amazon score is computed every step iterations of the IO algorithm.
-    T_max : int
-        Maximum number of iterations of IO algorithm.
-    step_size_constant : float
-        Constant that multiplies the step-size used for the IO algorithm.
-    batch : float or {'reshuffled'}
-        If float, it is the ratio of dataset used in each iteration of the
-        algorithm. For instance, if batch=0.1, 10% of the dataset will be used.
-        If batch='reshuffled', for each iteration of the IO algorithm, it goes
-        over the entire dataset one example at a time, reshuffeling the dataset
-        at the beginning of each iteration.
-    alpha : float
-        IO paramter.
-    solver_IO : {'gurobi', 'ortools', 'greedy'}
-        Solver used in the IO algorithm.
-    solver_complete_route : {'gurobi', 'ortools', 'greedy'}
-        Solver used to compute complete route.
-    route_quality : {'HML', 'HM'}
-        Quality of used routes. HML means high, medium and low quality routes
-        were used.
-    compute_train_score : bool
-        If true, also computes the score using the training data, i.e.,
-        in-sample score.
-    area_cluster : bool
-        If true, assumes expert respects area clusters, and enforce this
-        behaviour in the solution.
-    region_cluster : bool
-        If true, assumes expert respects region clusters, and enforce this
-        behaviour in the solution..
-    zone_id_diff : bool
-        If true, assumes expert respects the 'one unit difference' rule, and
-        enforce this behaviour in the solution.
-    test_theta_init : bool
-        If true, computes the score of initial theta.
-    path_to_output_data : string
-        Path to folder location of data.
-
-    Returns
-    -------
-    time_identifier : string
-        String with the time identifier of the results.
-
-    Raises
-    ------
-    Exception
-        If no results are found for this simulation parameters.
-
-    """
+def get_data(station_code, solver_IO, solver_zone_seq, solver_complete_route,
+             compute_train_score, area_cluster, region_cluster, zone_id_diff,
+             step_size_constant, step_size_type, resolution, T, update_step,
+             regularizer, reg_param, averaged_type, normalize_grad, sub_loss,
+             dataset_size, initial_theta, path_to_output_data):
+    """Retrieve simulation data from simulation parameters."""
     files = os.listdir(path_to_output_data)
     files.sort(reverse=True)
 
@@ -155,35 +94,41 @@ def get_data(station_code, solver_IO, solver_complete_route,
                     elif i == 1:
                         flag = flag*(param == solver_IO)
                     elif i == 2:
-                        flag = flag*(param == solver_complete_route)
+                        flag = flag*(param == solver_zone_seq)
                     elif i == 3:
-                        flag = flag*(param == str(compute_train_score))
+                        flag = flag*(param == solver_complete_route)
                     elif i == 4:
-                        flag = flag*(param == str(area_cluster))
+                        flag = flag*(param == str(compute_train_score))
                     elif i == 5:
-                        flag = flag*(param == str(region_cluster))
+                        flag = flag*(param == str(area_cluster))
                     elif i == 6:
-                        flag = flag*(param == str(zone_id_diff))
+                        flag = flag*(param == str(region_cluster))
                     elif i == 7:
-                        flag = flag*(param == str(step_size_constant))
+                        flag = flag*(param == str(zone_id_diff))
                     elif i == 8:
-                        flag = flag*(param == step_size_type)
+                        flag = flag*(param == str(step_size_constant))
                     elif i == 9:
-                        flag = flag*(param == str(resolution))
+                        flag = flag*(param == step_size_type)
                     elif i == 10:
-                        flag = flag*(param == str(T))
+                        flag = flag*(param == str(resolution))
                     elif i == 11:
-                        flag = flag*(param == update_step)
+                        flag = flag*(param == str(T))
                     elif i == 12:
-                        flag = flag*(param == regularizer)
+                        flag = flag*(param == update_step)
                     elif i == 13:
-                        flag = flag*(param == str(reg_param))
+                        flag = flag*(param == regularizer)
                     elif i == 14:
-                        flag = flag*(param == str(averaged_type))
+                        flag = flag*(param == str(reg_param))
                     elif i == 15:
-                        flag = flag*(param == str(normalize_grad))
+                        flag = flag*(param == str(averaged_type))
                     elif i == 16:
+                        flag = flag*(param == str(normalize_grad))
+                    elif i == 17:
                         flag = flag*(param == str(sub_loss))
+                    elif i == 18:
+                        flag = flag*(param == str(dataset_size))
+                    elif i == 19:
+                        flag = flag*(param == initial_theta)
 
                 if flag:
                     return time_identifier
@@ -350,7 +295,7 @@ def dists_test_data(theta_IO, route, zc_train, zone_id_to_index, area_cluster,
 
 
 def amazon_score(theta_IO, dataset, zc_train, zone_id_to_index,
-                 index_to_zone_id, solver_complete_route, solver_IO,
+                 solver_complete_route, solver_zone_seq,
                  station_code, area_cluster, region_cluster, zone_id_diff):
     """
     Compute amazon score.
@@ -372,14 +317,13 @@ def amazon_score(theta_IO, dataset, zc_train, zone_id_to_index,
         Mapping from Amazon's zone IDs (string) to an unique integer.
     solver_complete_route : {'gurobi', 'ortools', 'greedy'}
         Solver used to compute complete route.
-    solver_IO : {'gurobi', 'ortools', 'greedy'}
-        Solver used in the IO algorithm.
+    solver_zone_seq : {'gurobi', 'ortools', 'greedy'}
+        Solver used to compute the zone sequence when computing the Amazon
+        score.
     station_code : {'DLA7', 'DLA9', 'DLA8', 'DBO3', 'DSE5', 'DSE4', 'DCH4',
                     'DBO2', 'DCH3', 'DLA3', 'DLA4', 'DAU1', 'DCH1', 'DLA5',
                     'DSE2', 'DCH2', 'DBO1'}
         Station (depot) code.
-    path_to_output_data : string
-        Path to folder location of data.
     area_cluster : bool
         If true, assumes expert respects area clusters, and enforce this
         behaviour in the solution.
@@ -412,7 +356,7 @@ def amazon_score(theta_IO, dataset, zc_train, zone_id_to_index,
                                     region_cluster, zone_id_diff)
 
         # Compute zone sequence
-        zone_id_seq_mod, _ = solve_ATSP(dists_mod, solver_IO)
+        zone_id_seq_mod, _ = solve_ATSP(dists_mod, solver_zone_seq)
         zone_id_seq = [zone_id if zone_id[0] != zone_id[1] else zone_id[1:]
                        for zone_id in zone_id_seq_mod]
 
