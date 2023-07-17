@@ -18,10 +18,10 @@ The following Python packages are required:
 If you use this repository, please cite the accompanying paper:
 
 ```bibtex
-@article{zattoniscroccaro2023learning,
-  title={Learning in Routing Problems: an Inverse Optimization Approach},
+@article{zattoniscroccaro2023inverse,
+  title={Inverse Optimization for Routing Problems},
   author={Zattoni Scroccaro, Pedro and van Beek, Piet and Mohajerin Esfahani, Peyman and Atasoy, Bilge},
-  journal={https://arxiv.org/abs/0000.00000},
+  journal={https://arxiv.org/abs/2307.07357},
   year={2023}
 }
 ```
