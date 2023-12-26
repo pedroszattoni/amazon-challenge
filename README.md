@@ -1,6 +1,6 @@
 # An Inverse Optimization approach to the Amazon Challenge
 
-This repository contains the source code to reproduce the Inverse Optimization (IO) approach to the [Amazon Last Mile Routing Research Challenge](https://routingchallenge.mit.edu/) from the paper [Learning in Routing Problems: an Inverse Optimization Approach](https://arxiv.org/abs/2307.07357).
+This repository contains the source code to reproduce the Inverse Optimization (IO) approach to the [Amazon Last Mile Routing Research Challenge](https://routingchallenge.mit.edu/) from the paper [Inverse Optimization for Routing Problems](https://arxiv.org/abs/2307.07357).
 
 ## Usage
 
