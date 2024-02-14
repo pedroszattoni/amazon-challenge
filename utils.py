@@ -4,7 +4,6 @@ Utils module for solving the Amazon Challenge using Inverse Optimization.
 Author: Pedro Zattoni Scroccaro
 """
 
-import os
 from operator import itemgetter
 from itertools import groupby
 from itertools import combinations
@@ -26,7 +25,7 @@ def zone_centers(data):
         Dataset of routes, or a single route. If more than one route, the keys
         are the route IDs and the values are dictionaries with the route's
         data. If a single route, is it only the dictionary with the route's
-        data, that is, without an route ID.
+        data, that is, without a route ID.
 
     Returns
     -------
@@ -35,7 +34,7 @@ def zone_centers(data):
         latitude and longitude coordinates of the zone center (list)
     stops_per_zone : dict
         Set of spots of each zone in the dataset. The keys are the zone IDs
-        (string) and the values are list of tuples, each tuple containing the
+        (string) and the values are a list of tuples, each tuple containing the
         latitude and longitude coordinates of a stop in that respective zone.
 
     """
@@ -59,7 +58,7 @@ def zone_centers(data):
             else:
                 stops_per_zone[zone_id] = [(lat, lng)]
 
-    # Computes geographical center of the zones
+    # Computes the geographical center of the zones
     zc = {}
     for zone_id in stops_per_zone:
         stops = stops_per_zone[zone_id]
@@ -67,73 +66,6 @@ def zone_centers(data):
         zc[zone_id] = center
 
     return zc, stops_per_zone
-
-
-def get_data(station_code, solver_IO, solver_zone_seq, solver_complete_route,
-             compute_train_score, area_cluster, region_cluster, zone_id_diff,
-             step_size_constant, step_size_type, resolution, T, update_step,
-             regularizer, reg_param, averaged_type, normalize_grad, sub_loss,
-             dataset_size, initial_theta, path_to_output_data):
-    """Retrieve simulation data from simulation parameters."""
-    files = os.listdir(path_to_output_data)
-    files.sort(reverse=True)
-
-    # iterating over all files
-    for file in files:
-        if file.endswith('.txt'):
-            time_identifier = file[:14]
-            flag = True
-            with open(path_to_output_data+file) as f:
-                f_lines = f.readlines()
-                for i in range(len(f_lines)):
-                    line_splited = f_lines[i].split(' ')
-                    param = line_splited[2][:-1]
-
-                    if i == 0:
-                        flag = flag*(param == station_code)
-                    elif i == 1:
-                        flag = flag*(param == solver_IO)
-                    elif i == 2:
-                        flag = flag*(param == solver_zone_seq)
-                    elif i == 3:
-                        flag = flag*(param == solver_complete_route)
-                    elif i == 4:
-                        flag = flag*(param == str(compute_train_score))
-                    elif i == 5:
-                        flag = flag*(param == str(area_cluster))
-                    elif i == 6:
-                        flag = flag*(param == str(region_cluster))
-                    elif i == 7:
-                        flag = flag*(param == str(zone_id_diff))
-                    elif i == 8:
-                        flag = flag*(param == str(step_size_constant))
-                    elif i == 9:
-                        flag = flag*(param == step_size_type)
-                    elif i == 10:
-                        flag = flag*(param == str(resolution))
-                    elif i == 11:
-                        flag = flag*(param == str(T))
-                    elif i == 12:
-                        flag = flag*(param == update_step)
-                    elif i == 13:
-                        flag = flag*(param == regularizer)
-                    elif i == 14:
-                        flag = flag*(param == str(reg_param))
-                    elif i == 15:
-                        flag = flag*(param == str(averaged_type))
-                    elif i == 16:
-                        flag = flag*(param == str(normalize_grad))
-                    elif i == 17:
-                        flag = flag*(param == str(sub_loss))
-                    elif i == 18:
-                        flag = flag*(param == str(dataset_size))
-                    elif i == 19:
-                        flag = flag*(param == initial_theta)
-
-                if flag:
-                    return time_identifier
-
-    raise Exception(f'No data found for {station_code}!')
 
 
 def dists_test_data(theta_IO, route, zc_train, zone_id_to_index, area_cluster,
@@ -145,13 +77,13 @@ def dists_test_data(theta_IO, route, zc_train, zone_id_to_index, area_cluster,
     zone sequences for the test set. However, there are two issues in the
     Amazon data. First, there are zones in the test set which are not visited
     in the training set. In these cases, for any edge connecting to an unseen
-    zone, we use the euclidean distance between them as the edge weight.
+    zone, we use the Euclidean distance between them as the edge weight.
     Second, there are cases when the same zone ID represents very far away
-    regions in the test dataset, compared to the training dataset. In these
+    regions in the test dataset, compared to the training dataset. In this
     case, we treat the training and test zone centers for the same zone ID as
-    the same zone only if they are are close enough from each other.
-    Additionally, we area cluster, region cluster, and zone ID difference
-    penalizations can be used.
+    the same zone only if they are close enough to each other. Additionally,
+    area cluster, region cluster, and zone ID difference penalizations can be
+    used.
 
     Parameters
     ----------
@@ -160,17 +92,17 @@ def dists_test_data(theta_IO, route, zc_train, zone_id_to_index, area_cluster,
     route : dict
         Test route data.
     zc_train : dict
-        Zone centers from training dataset.
+        Zone centers from the training dataset.
     zone_id_to_index : dict
         Mapping from Amazon's zone IDs (string) to an unique integer.
     area_cluster : bool
-        If true, assumes expert respects area clusters, and enforce this
+        If true, assume the expert respects area clusters, and enforce this
         behaviour in the solution.
     region_cluster : bool
-        If true, assumes expert respects region clusters, and enforce this
+        If true, assume the expert respects region clusters, and enforce this
         behaviour in the solution.
     zone_id_diff : bool
-        If true, assumes expert respects the 'one unit difference' rule, and
+        If true, assume the expert respects the 'one unit difference' rule, and
         enforce this behaviour in the solution.
 
     Returns
@@ -188,17 +120,17 @@ def dists_test_data(theta_IO, route, zc_train, zone_id_to_index, area_cluster,
         zc_route_lat = zc_route[zone_id_route][0]
         zc_route_lng = zc_route[zone_id_route][1]
 
-        # Check if zone ID in test route exists in training datase, and compute
-        # the distance between the zone center in the training dataset and the
-        # zone center from the test route. If the zone ID does not exist in the
-        # training dataset, add a dummy distance of 1 (large constant).
+        # Check if the zone ID in the test route exists in training dataset,
+        # and compute the distance between the zone center in the training
+        # dataset and the zone center from the test route. If the zone ID does
+        # not exist in the training dataset, add a dummy distance of 1.
         try:
             zone_dist = la.norm([zc_route_lat - zc_train[zone_id_route][0],
                                  zc_route_lng - zc_train[zone_id_route][1]])
         except KeyError:
             zone_dist = 1
 
-        # If the distance between the zone center from the traning set and the
+        # If the distance between the zone center from the training set and the
         # zone center from the test route is larger than a predefined
         # threshold, then we treat the test zone ID as a new zone. We do this
         # because we observed inconsistensis in the geographical locations of
@@ -208,8 +140,8 @@ def dists_test_data(theta_IO, route, zc_train, zone_id_to_index, area_cluster,
             new_zone_centers.add(zone_id_route)
 
     # If both zones exist in the training dataset and are not considered
-    # inconsistent (according to the criteria defined above), we used the
-    # distances we learning with IO. Otherwise, we use their eucliden distance.
+    # inconsistent (according to the criteria defined above), we use the
+    # distances learned with IO. Otherwise, we use their Eucliden distance.
     dists = {}
     for zone1_id in zc_route:
         for zone2_id in zc_route:
@@ -294,16 +226,18 @@ def dists_test_data(theta_IO, route, zc_train, zone_id_to_index, area_cluster,
     return dists
 
 
-def amazon_score(theta_IO, dataset, zc_train, zone_id_to_index,
-                 solver_complete_route, solver_zone_seq,
-                 station_code, area_cluster, region_cluster, zone_id_diff):
+def amazon_score(
+    theta_IO, dataset, zc_train, zone_id_to_index, solver_complete_route,
+    solver_zone_seq, station_code, area_cluster, region_cluster,
+    zone_id_diff, compute_error
+):
     """
-    Compute amazon score.
+    Compute Amazon score and (optionally) the zone sequence prediction error.
 
     Computes zone sequence using IO learned cost vector. From this zone
-    sequence, computes complete route at the stop (customer) level. Finally,
-    computes the Amazon score of the final complete route by comparing it with
-    the true route.
+    sequence, computes the complete route at the stop (customer) level.
+    Finally, computes the Amazon score of the final complete route by comparing
+    it with the true route.
 
     Parameters
     ----------
@@ -325,20 +259,24 @@ def amazon_score(theta_IO, dataset, zc_train, zone_id_to_index,
                     'DSE2', 'DCH2', 'DBO1'}
         Station (depot) code.
     area_cluster : bool
-        If true, assumes expert respects area clusters, and enforce this
+        If True, assumes expert respects area clusters, and enforces this
         behaviour in the solution.
     region_cluster : bool
-        If true, assumes expert respects region clusters, and enforce this
+        If True, assumes expert respects region clusters, and enforces this
         behaviour in the solution.
     zone_id_diff : bool
-        If true, assumes expert respects the 'one unit difference' rule, and
-        enforce this behaviour in the solution.
+        If True, assumes expert respects the 'one unit difference' rule, and
+        enforces this behaviour in the solution.
+    compute_error : bool
+        If True, computes zone sequence prediction error.
 
     Returns
     -------
-    scores : dict
-        Amazon score for the given dataset, as well as the individual score of
-        each route.
+    results : dict or tuple
+        If compute_error is False, returns dict with Amazon score for the given
+        dataset, as well as the individual score of each route. If
+        compute_error is True, also returns total zone sequence prediction
+        error.
 
     """
     scores = {}
@@ -346,25 +284,43 @@ def amazon_score(theta_IO, dataset, zc_train, zone_id_to_index,
     actual_routes = {}
     cost_matrices = {}
     invalid_scores = {}
+    error = 0
     for route_ID in dataset:
         route = dataset[route_ID]['stops'].copy()
         route_tt = dataset[route_ID]['travel_times'].copy()
         stop_seq_true = route_to_stop_seq(route)
 
-        dists_mod = dists_test_data(theta_IO, route, zc_train,
-                                    zone_id_to_index, area_cluster,
-                                    region_cluster, zone_id_diff)
+        dists_mod = dists_test_data(
+            theta_IO, route, zc_train, zone_id_to_index, area_cluster,
+            region_cluster, zone_id_diff
+        )
 
         # Compute zone sequence
         zone_id_seq_mod, _ = solve_ATSP(dists_mod, solver_zone_seq)
-        zone_id_seq = [zone_id if zone_id[0] != zone_id[1] else zone_id[1:]
-                       for zone_id in zone_id_seq_mod]
+        zone_id_seq = [
+            zone_id if zone_id[0] != zone_id[1] else zone_id[1:]
+            for zone_id in zone_id_seq_mod
+        ]
+
+        if compute_error:
+            m = len(zone_id_seq)
+            indexes = list(range(m))
+            route_zone_id_to_index = dict(zip(zone_id_seq, indexes))
+
+            x1_index = [route_zone_id_to_index[zone] for zone in zone_id_seq]
+            x1_vec = zone_seq_to_vec(x1_index, m)
+
+            x2_index = route_to_zone_seq(route, route_zone_id_to_index)
+            x2_vec = zone_seq_to_vec(x2_index, m)
+
+            error += np.linalg.norm(x1_vec - x2_vec, 1)
 
         # Compute complete stop sequence
-        stop_seq = zone_seq_to_stop_seq(zone_id_seq, route, route_tt,
-                                        solver_complete_route)
+        stop_seq = zone_seq_to_stop_seq(
+            zone_id_seq, route, route_tt, solver_complete_route
+        )
 
-        # Put data in the required format
+        # Put results in the required format
         indexes = list(range(len(stop_seq)))
         stop_seq_dict = dict(zip(stop_seq, indexes))
         submission[route_ID] = {'proposed': stop_seq_dict.copy()}
@@ -378,7 +334,12 @@ def amazon_score(theta_IO, dataset, zc_train, zone_id_to_index,
     # Compute Amazon score
     scores = evaluate(actual_routes, submission, cost_matrices, invalid_scores)
 
-    return scores
+    if compute_error:
+        results = (scores, error)
+    else:
+        results = scores
+
+    return results
 
 
 def zone_seq_to_stop_seq(zone_id_seq, route, route_tt, solver_complete_route):
@@ -399,7 +360,7 @@ def zone_seq_to_stop_seq(zone_id_seq, route, route_tt, solver_complete_route):
     Returns
     -------
     stop_seq_rot : list
-        Resulting sequence of stops, starting from the depot.
+        The resulting sequence of stops, starting from the depot.
 
     """
     # Panlization constant used to enforce the zone sequence
@@ -450,7 +411,7 @@ def zone_seq_to_vec(zone_seq, m):
     ----------
     zone_seq : list
         Zone sequence. The zones are encoded using their
-        unique integer index, intead of thier Amazon zone ID.
+        unique integer index, instead of their Amazon zone ID.
     m : int
         Total number of zones. Used to define the size of the matrix.
 
@@ -474,7 +435,7 @@ def zone_seq_to_vec(zone_seq, m):
 
 def route_to_stop_seq(route):
     """
-    Extract stop sequence from route data.
+    Extract the stop sequence from the route data.
 
     Parameters
     ----------
@@ -502,12 +463,12 @@ def route_to_stop_seq(route):
 
 def route_to_zone_seq(route, zone_id_to_index=None):
     """
-    Extract zone sequence from route data.
+    Extract the zone sequence from the route data.
 
     Transform the sequence of stop into a sequence of zone ID, using the zone
     of the corresponding stop in the route data. Equal zone IDs are merged if
-    cosecutive. If the same zone ID appeard multiple times after merging, keep
-    the one with the most consecutive stops.
+    consecutive. If the same zone ID appeared multiple times after merging,
+    keep the one with the most consecutive stops.
 
     Parameters
     ----------
@@ -520,7 +481,7 @@ def route_to_zone_seq(route, zone_id_to_index=None):
     -------
     zone_seq : list
         Resulting zone sequence. If zone_id_to_index is given, zones are
-        encoded using unique integer index. If zone_id_to_index is None, uses
+        encoded using a unique integer index. If zone_id_to_index is None, uses
         Amazon's original zone ID string.
 
     """
@@ -535,11 +496,11 @@ def route_to_zone_seq(route, zone_id_to_index=None):
     zone_sequence_sorted = sorted(zone_sequence_index, key=itemgetter(1))
     zone_sequence_sorted = [item[0] for item in zone_sequence_sorted]
 
-    # Merge and count consecutive apperances
+    # Merge and count consecutive appearances
     zone_sequence_sorted_merged = [(key, sum(1 for i in g)) for key, g
                                    in groupby(zone_sequence_sorted)]
 
-    # Find the size of longest sequence of the same zone, for each zone ID
+    # Find the size of the longest sequence of the same zone, for each zone ID
     zone_id_set = set([key for key, _group in groupby(zone_sequence_sorted)])
     zone_longest = {zone: 0 for zone in zone_id_set}
     for zone, lengh in zone_sequence_sorted_merged:
@@ -602,7 +563,7 @@ def ATSP_gurobi(dists):
                 cycle = thiscycle  # New shortest subtour
         return cycle
 
-    # When using Gurobi solver, dists dictionary should not contain the
+    # When using Gurobi solver, the dists dictionary should not contain the
     # distance from a node to itself.
     dists = {(i, j): dists[(i, j)] for i, j in dists if i != j}
 
