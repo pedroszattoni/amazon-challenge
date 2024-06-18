@@ -179,13 +179,13 @@ else:
     station_code = 'DBO1'
     solver_IO = 'gurobi'
     solver_zone_seq = 'gurobi'
-    solver_complete_route = 'ortools'
+    solver_complete_route = 'LKH'
     step_size_constant = 0.0005
-    T = 2
+    T = 5
     resolution = 1
     update_step = 'standard'
     batch_type = 'reshuffled'
-    averaged_type = 0
+    averaged_type = 2
     dataset_size = 1
     initial_theta = 'zone_centers'
     sub_loss = False
@@ -436,8 +436,10 @@ for theta_IO in theta_IO_list:
         )
         if compute_error:
             scores_train, error_train = results_train
-            score_train_hist.append(scores_train['submission_score'])
             error_train_hist.append(error_train)
+        else:
+            scores_train = results_train
+        score_train_hist.append(scores_train['submission_score'])
 
     results_test = amazon_score(
         theta_IO, dataset_test, zc_train, zone_id_to_index,
@@ -446,8 +448,10 @@ for theta_IO in theta_IO_list:
     )
     if compute_error:
         scores_test, error_test = results_test
-        score_test_hist.append(scores_test['submission_score'])
         error_test_hist.append(error_test)
+    else:
+        scores_test = results_test
+    score_test_hist.append(scores_test['submission_score'])
 
 toc = time.time()
 print(f'Done ({round(toc-tic, 2)} seconds)')
