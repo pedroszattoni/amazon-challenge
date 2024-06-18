@@ -10,6 +10,7 @@ from itertools import combinations
 import numpy as np
 import numpy.linalg as la
 from score_mod import evaluate
+import tempfile
 
 
 def zone_centers(data):
@@ -764,13 +765,69 @@ def ATSP_greedy(dists_dict):
     return tour, obj_val
 
 
+def ATSP_lkh(dists):
+    """Asymmetric TSP solver using LKH-3."""
+    import lkh
+
+    list_nodes = list(set([node for node, _ in dists]))
+    n = len(list_nodes)
+    indexes = list(range(n))
+    idx_to_node = dict(zip(indexes, list_nodes))
+
+    scale_factor = 1e2
+    dists_new = np.zeros((n, n))
+    for i in indexes:
+        for j in indexes:
+            if i == j:
+                dists_new[i][j] = scale_factor*100
+            else:
+                dists_new[i][j] = int(
+                    scale_factor*dists[idx_to_node[i], idx_to_node[j]]
+                )
+
+    outf = tempfile.NamedTemporaryFile(suffix='.txt').name
+    with open(outf, 'w') as dest:
+        dist_matrix = ""
+        for row in dists_new.tolist():
+            dist_matrix += ' '.join([str(a) for a in row]) + '\n'
+            template = """NAME: {name}
+            TYPE: ATSP
+            DIMENSION: {n_nodes}
+            EDGE_WEIGHT_TYPE: EXPLICIT
+            EDGE_WEIGHT_FORMAT: FULL_MATRIX
+            EDGE_WEIGHT_SECTION
+            {matrix_s}"""
+            data = template.format(
+                **{'name': 'data', 'n_nodes': n, 'matrix_s': dist_matrix}
+            )
+        dest.write(data)
+
+    text_file = open(outf)
+    problem_string = text_file.read()
+    problem = lkh.LKHProblem.parse(problem_string)
+    solver_path = 'path/to/LKH/solver/LKH-3.exe'  # Needs to be edited!
+    route = lkh.solve(solver_path, problem=problem)[0]
+    # Nodes in the solution are 1-indexed
+    route = [idx_to_node[stop - 1] for stop in route]
+
+    lkh_cost = dists[route[-1], route[0]]
+    for i in range(len(route) - 1):
+        lkh_cost += dists[route[i], route[i + 1]]
+
+    return route, lkh_cost
+
+
 def solve_ATSP(dists, solver):
     """Wrap available ATSP solvers."""
-    if solver == 'gurobi':
+    if solver == 'lkh':
+        route, obj_val = ATSP_lkh(dists)
+    elif solver == 'gurobi':
         route, obj_val = ATSP_gurobi(dists)
     elif solver == 'ortools':
         route, obj_val = ATSP_ortools(dists)
     elif solver == 'greedy':
         route, obj_val = ATSP_greedy(dists)
+    else:
+        raise Exception(f"Solver {solver} not available!")
 
     return route, obj_val
