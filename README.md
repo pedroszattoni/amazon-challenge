@@ -1,6 +1,6 @@
 # An Inverse Optimization approach to the Amazon Challenge
 
-This repository contains the source code to reproduce the Inverse Optimization (IO) approach to the [Amazon Last Mile Routing Research Challenge](https://routingchallenge.mit.edu/) from the paper [Inverse Optimization for Routing Problems](https://arxiv.org/abs/2307.07357).
+This repository contains the source code to reproduce the Inverse Optimization (IO) approach to the [Amazon Last Mile Routing Research Challenge](https://routingchallenge.mit.edu/) from the paper [Inverse Optimization for Routing Problems](https://pubsonline.informs.org/doi/abs/10.1287/trsc.2023.0241).
 
 ## Usage
 
@@ -18,10 +18,10 @@ The following Python packages are required:
 If you use this repository, please cite the accompanying paper:
 
 ```bibtex
-@article{zattoniscroccaro2023inverse,
+@article{zattoniscroccaro2024inverse,
   title={Inverse Optimization for Routing Problems},
   author={Zattoni Scroccaro, Pedro and van Beek, Piet and Mohajerin Esfahani, Peyman and Atasoy, Bilge},
-  journal={https://arxiv.org/abs/2307.07357},
-  year={2023}
+  journal={Transportation Science},
+  year={2024}
 }
 ```
